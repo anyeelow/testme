@@ -151,8 +151,9 @@ SLPsocio4 <- function(parMat,
     }
   }
   
-  colnames(parMat) <- #put back n0 for 10p
+  colnames(parMat) <-
     c(
+      'n0',
       'a0min',
       'a0max',
       'Tpred',
@@ -228,7 +229,7 @@ SLPsocio4 <- function(parMat,
     
     #Original 10p: abnPol[1, nInd, ptN] <- parMat[ptN, 1]
     n0 <- 1/parMat[ptN, 'decayCoeffGroups'] + 2
-    abnPol[1, nInd, ptN] <- n0
+    abnPol[1, nInd, ptN] <- parMat[ptN, 1]
     
     abnPol[1, bInd, ptN] <-
       abnPol[1, nInd, ptN] - abnPol[1, aInd, ptN]
@@ -261,7 +262,8 @@ SLPsocio4 <- function(parMat,
     #n0   <- parMat[ptN,1]
     #accP <- (parMat[ptN,2]+parMat[ptN,3])/2/(n0)
     
-    accP <- (parMat[ptN,'a0min']+parMat[ptN,'a0max'])/2/(n0)
+    n0   <- parMat[ptN,1]
+    accP <- (parMat[ptN,2]+parMat[ptN,3])/2/(n0)
     
     #A: this is the actual experimental initial acceptance probability in pt's head generated from all these parms!!!
     # And this would correspond to an 'equilibrium SE' of:
@@ -474,7 +476,7 @@ SLPsocio4 <- function(parMat,
     colnames(SLPetc[[4]]) <- c('gp','pred','obs','SE','nofb'); # Just like real expt. data ...
     SLPetc[[5]] <- parMat;
     #put back n0 for next line for 10p
-    colnames(SLPetc[[5]]) <- c('a0min', 'a0max', 'Tpred', 'Bpred ','decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi','sesh');
+    colnames(SLPetc[[5]]) <- c('n0','a0min', 'a0max', 'Tpred', 'Bpred ','decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi','sesh');
     names(SLPetc) <-c('predSLnP','SESLnP','DatBelPol','genD','ptPar');
     
     return(SLPetc);
@@ -494,7 +496,7 @@ SLPsocio4 <- function(parMat,
 
 tr2natLP4 <- function(trp,check=1){  # from transformed, i.e. -inf to inf, to native space
   #  trp to be as follows;
-  #      c(ln(n0-a0max-1), ln(a0min), ln(a0max-a0min), ln(Tpred), Bpred, atanh(2decayCoeffGroups-1)
+  #      c(ln(n0-a0max), ln(a0min), ln(a0max-a0min), ln(Tpred), Bpred, atanh(2decayCoeffGroups-1)
   # atanh(2decayCoeffSelf-1), ln(weightSelf), ln(sensi), ln(sesh))
   #  Returns:  c('n0', 'a0min', 'a0max', 'Tpred', 'Bpred ',
   # 'decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi','sesh')
@@ -506,39 +508,28 @@ tr2natLP4 <- function(trp,check=1){  # from transformed, i.e. -inf to inf, to na
     trp <- matrix(trp,nrow=1,byrow=TRUE) }   }
   ptTot <- dim(trp)[1]; 
   p <- matrix(NA,nrow=ptTot,ncol=dim(trp)[2]); 
-  
-  #first, dcGroups, a0max then a0min
 
-  p[,5] <- 0.5*(tanh(trp[,5])+1)
-  n0 <- 2 + 1/p[,5]
-  p[,2] <- 0.5*n0*(tanh(trp[,2])+1) # Or 1+0.5*(n0-1)*(tanh(trp[,2])+1)
-  p[,1] <- 0.5*p[,2]*(tanh(trp[,1])+1)
 
   #n0 (1), a0min(2), a0max (3)
-  #p[,2] <- exp(trp[,2]);           # a0min
-  #p[,3] <- p[,2] + exp(trp[,3]);  # a0max
-  #p[,1] <- 1 + p[,3] + exp(trp[,1]);  # n0
+  p[,2] <- exp(trp[,2]);           # a0min
+  p[,3] <- p[,2] + exp(trp[,3]);  # a0max
+  p[,1] <- p[,3] + exp(trp[,1]);  # n0
   
   #the rest: 
-  #p[,c(4,8,9,10)] <- exp(trp[,c(4,8,9,10)]);  # Tpred, weightSelf, sensi, sesh
-  #p[,5] <- trp[,5];
-  #p[,6] <- 0.5*(1 + tanh(trp[,6])) ; # decayCoeffGroups
-  #p[,7] <- 0.5*(1 + tanh(trp[,7])) ; # decayCoeffSelf
-  
-  p[,c(3,7,8,9)] <- exp(trp[,c(3,7,8,9)]);  # Tpred, weightSelf, sensi, sesh
-  p[,4] <- trp[,4];
-  p[,6] <- 0.5*(1 + tanh(trp[,6])) ; # decayCoeffSelf
+  p[,c(4,8,9,10)] <- exp(trp[,c(4,8,9,10)]);  # Tpred, weightSelf, sensi, sesh
+  p[,5] <- trp[,5];
+  p[,6] <- 0.5*(1 + tanh(trp[,6])) ; # decayCoeffGroups
+  p[,7] <- 0.5*(1 + tanh(trp[,7])) ; # decayCoeffSelf
   
   
-  if (check){ colnames(p) <- c('a0min', 'a0max', 'Tpred', 'Bpred ', 'decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi','sesh') };
+  if (check){ colnames(p) <- c('n0','a0min', 'a0max', 'Tpred', 'Bpred ', 'decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi','sesh') };
   #if 10p put n0 back above
   return(p); 
 } 
 
 nat2trLP4 <- function(p,check=1){  # From native to transformed.
   #  Returns trp as follows;
-  #       ln(a0min), ln(a0max-a0min), ln(Tpred), Bpred, atanh(2*((upperbound-p[,5])/upperbound) - 1)
-  # atanh(2decayCoeffSelf-1), ln(weightSelf), ln(sensi), ln(sesh))
+  # c(ln(n0-a0max), ln(a0min), ln(a0max-a0min), ln(Tpred), Bpred, atanh(2decayCoeffGroups-1)
   
   
   eps   <- exp(-25);   # So that for R 1+eps > 1
@@ -551,19 +542,19 @@ nat2trLP4 <- function(p,check=1){  # From native to transformed.
   # Detailed check
   if (check > 1){
     for (ptN in 1:ptTot) {
-      #if (any(p[ptN,c(2,4,8,9,10)] < -2*eps)) { #A: why was it sum?
-      #  print(paste('parMat 2,4,8,9,10 =',p[ptN,c(2,4,8,9,10)]));
+      if (any(p[ptN,c(2,4,8,9,10)] < -2*eps)) { #A: why was it sum?
+        print(paste('parMat 2,4,8,9,10 =',p[ptN,c(2,4,8,9,10)]));
       
-      if (any(p[ptN,c(1,3,7,8,9)] < -2*eps)) { #A: why was it sum?
-        print(paste('parMat 1,3,7,8,9 =',p[ptN,c(1,3,7,8,9)]));
+      #if (any(p[ptN,c(1,3,7,8,9)] < -2*eps)) { #A: why was it sum?
+      #  print(paste('parMat 1,3,7,8,9 =',p[ptN,c(1,3,7,8,9)]));
         stop('--> ln of -ve    error' ); 
       }
-      #if ((p[ptN,1]-p[ptN,3]-1) < -2*eps) { 
-      #  stop('ln(n0-a0max-1) error' );
-      #}
+      if ((p[ptN,1]-p[ptN,3]) < -2*eps) { 
+        stop('ln(n0-a0max-1) error' );
+      }
       
-      #if ((p[ptN,3]-p[ptN,2]) < -2*eps) {
-      if ((p[ptN,2]-p[ptN,1]) < -2*eps) {
+      if ((p[ptN,3]-p[ptN,2]) < -2*eps) {
+      #if ((p[ptN,2]-p[ptN,1]) < -2*eps) {
         stop('ln(a0max-a0min) error' ); 
       }
       
@@ -574,38 +565,33 @@ nat2trLP4 <- function(p,check=1){  # From native to transformed.
   
   #coordinating transformations of n0 (1), a0min (2) and a0max (3)
   
-  #y <- p[,1]-p[,3]-1;  y[y<eps] <- eps; 
-  #trp[,1] <- log(y);            # ln(n0-a0min-1) 
-  #y <- p[,2];        y[y<eps] <- eps; 
-  #trp[,2] <- log(y);            # ln(a0min-1)
-  #y <- p[,3]-p[,2]  ;  y[y<eps] <- eps; 
-  #trp[,3] <- log(y);            # ln(a0max-a0min)
+  y <- p[,1]-p[,3];  y[y<eps] <- eps; 
+  trp[,1] <- log(y);            # ln(n0-a0min-1) 
+  y <- p[,2];        y[y<eps] <- eps; 
+  trp[,2] <- log(y);            # ln(a0min-1)
+  y <- p[,3]-p[,2]  ;  y[y<eps] <- eps; 
+  trp[,3] <- log(y);            # ln(a0max-a0min)
   
-  #first, decayCoeffGroups, a0max and a0min 
-  
-  trp[,5] <- atanh(2*p[,5]-1)
-  n0 = 2+1/p[,5]
-  
-  trp[,2] <- atanh(2*p[,2]/n0   -1); # OR, if > 1, atanh(2*(p[,2]-1)/(n0-1)-1)
-  trp[,1] <- atanh(2*p[,1]/p[,2]-1)
   # the others : ln(Tpred) (4), Bpred (5), atanh(2decayCoeffGroups-1) (6)
   # atanh(2decayCoeffSelf-1) (7), ln(weightSelf) (8), ln(sensi) (9), ln(sesh) (10)
   
-  #trp[,5]  <- p[,5]; #Bpred
-  #trp[,6]  <- atanh(2*p[,6]-1); #atanh(2decayCoeffGroups-1)
-  #trp[,7]  <- atanh(2*p[,7]-1); #atanh(2decayCoeffSelf-1) 
-  #y <- p[,c(4,8,9,10)]; y[y<eps] <- eps; trp[,c(4,8,9,10)] <- log(y); #ln(Tpred), ln(weightSelf), ln(sensi), ln(sesh)
+  trp[,5]  <- p[,5]; #Bpred
+  trp[,6]  <- atanh(2*p[,6]-1); #atanh(2decayCoeffGroups-1)
+  trp[,7]  <- atanh(2*p[,7]-1); #atanh(2decayCoeffSelf-1) 
+  y <- p[,c(4,8,9,10)]; y[y<eps] <- eps; trp[,c(4,8,9,10)] <- log(y); #ln(Tpred), ln(weightSelf), ln(sensi), ln(sesh)
   
-  trp[,4]  <- p[,4]; #Bpred
-  trp[,6]  <- atanh(2*p[,6]-1); #atanh(2decayCoeffSelf-1) 
-  y <- p[,c(3,7,8,9)]; y[y<eps] <- eps; trp[,c(3,7,8,9)] <- log(y); #ln(Tpred), ln(weightSelf), ln(sensi), ln(sesh)
+  #trp[,4]  <- p[,4]; #Bpred
+  #trp[,6]  <- atanh(2*p[,6]-1); #atanh(2decayCoeffSelf-1) 
+  #y <- p[,c(3,7,8,9)]; y[y<eps] <- eps; trp[,c(3,7,8,9)] <- log(y); #ln(Tpred), ln(weightSelf), ln(sensi), ln(sesh)
   
   # rough bounding of under / overflows:
   trp[trp < minLn] <- minLn;    trp[trp > -minLn] <- -minLn;
   
+  #if (check){ colnames(trp)<- c('atanh(2a0min/aMax-1)','atanh(2a0max/(n0-1)-1)', 'ln(Tpred)', 'Bpred', 'atanh(2decayCoeffGroups-1)', 'atanh(2decayCoeffSelf-1)', 'ln(weightSelf)', 'ln(sensi)', 'ln(sesh)') }
+  #return(trp); #can put ln(n0-a0max-1) back above
   
-  if (check){ colnames(trp)<- c('atanh(2a0min/aMax-1)','atanh(2a0max/(n0-1)-1)', 'ln(Tpred)', 'Bpred', 'atanh(2decayCoeffGroups-1)', 'atanh(2decayCoeffSelf-1)', 'ln(weightSelf)', 'ln(sensi)', 'ln(sesh)') }
-  return(trp); #can put ln(n0-a0max-1) back above
+  if (check){ colnames(trp)<- c('ln(n0-a0max-1)', 'ln(a0min)', 'ln(a0max-a0min)', 'ln(Tpred)', 'Bpred', 'atanh(2decayCoeffGroups-1)', 'atanh(2decayCoeffSelf-1)', 'ln(weightSelf)', 'ln(sensi)', 'ln(sesh)') }
+  return(trp);
   
 }  # end of nat2trLP4
 
@@ -623,7 +609,7 @@ msLP4tr <- function(trParM, datAr, Pri=NA, check=0){
     trParM <- matrix(trParM,nrow=1,byrow=TRUE)      }
   
   if (check){
-    if ((dim(datAr)[2]<4) || (dim(trParM)[2]<9)){ #change back to 10 if needed
+    if ((dim(datAr)[2]<4) || (dim(trParM)[2]<10)){ 
       stop('arguments trParM or datAr appear to have wrong dimensions');  }
   }
   parM <- tr2natLP4(trParM)
@@ -636,16 +622,16 @@ msLP4tr <- function(trParM, datAr, Pri=NA, check=0){
       #            gamma  gamma    gamma    gamma    norm      beta                  beta         gamma      gamma     gamma
       # First the non-gamma-prior param:
       mSLPrior <- 
-        -dbetaMS(parM[ptN,5], Pri[1,5],Pri[2,5]) #remove this line if 10p
+      #-dbetaMS(parM[ptN,5], Pri[1,5],Pri[2,5]) #remove this line if 10p
       -dbetaMS(parM[ptN,6], Pri[1,6],Pri[2,6])
-      -dnorm(  parM[ptN,4], Pri[1,4],Pri[2,4],log=TRUE) #Bpred. Note signs (both -ve). Please also note that SD for 6,7 prior must be between 0 and 0.25 due to nature of it being converted into a beta distribution.
-      #-dbetaMS(parM[ptN,7], Pri[1,7],Pri[2,7]) #put back this line & the one below if 10p
-      #-dnorm(  parM[ptN,5], Pri[1,5],Pri[2,5],log=TRUE) #Bpred. Note signs (both -ve). Please also note that SD for 6,7 prior must be between 0 and 0.25 due to nature of it being converted into a beta distribution.
+      #-dnorm(  parM[ptN,4], Pri[1,4],Pri[2,4],log=TRUE) #Bpred. Note signs (both -ve). Please also note that SD for 6,7 prior must be between 0 and 0.25 due to nature of it being converted into a beta distribution.
+      -dbetaMS(parM[ptN,7], Pri[1,7],Pri[2,7]) #put back this line & the one below if 10p
+      -dnorm(  parM[ptN,5], Pri[1,5],Pri[2,5],log=TRUE) #Bpred. Note signs (both -ve). Please also note that SD for 6,7 prior must be between 0 and 0.25 due to nature of it being converted into a beta distribution.
       # now the gamma params, first the ones with min. zero:
-      #mSLPrior <- mSLPrior - sum(dgammaMS(parM[ptN,c(2:4,8:10)], Pri[1,c(2:4,8:10)],Pri[2,c(2:4,8:10)], log=TRUE)); 
+      mSLPrior <- mSLPrior - sum(dgammaMS(parM[ptN,c(1:4,8:10)], Pri[1,c(1:4,8:10)],Pri[2,c(1:4,8:10)], log=TRUE)); 
       # n0 has min 1.0:
       #mSLPrior <- mSLPrior - sum(dgammaMS(parM[ptN,1]-1.0, Pri[1,1],Pri[2,1], log=TRUE));
-      mSLPrior <- mSLPrior - sum(dgammaMS(parM[ptN,c(1:3,7:9)], Pri[1,c(1:3,7:9)],Pri[2,c(1:3,7:9)], log=TRUE)); 
+      #mSLPrior <- mSLPrior - sum(dgammaMS(parM[ptN,c(1:3,7:9)], Pri[1,c(1:3,7:9)],Pri[2,c(1:3,7:9)], log=TRUE)); 
     }
   } 
   
@@ -664,7 +650,7 @@ msLP4tr <- function(trParM, datAr, Pri=NA, check=0){
 
 # ################################ start of nlm fit #################################
 
-try({load(paste(baseDir,"loadfornlm9.RData",sep=''));
+try({load(paste(baseDir,"loadfornlm10.RData",sep=''));
   bestsofar <- importCSV(paste(baseDir,"soc04fit9par01to61_1.csv",sep=''))}) #this contains bestsofar9, tryPmatrix, datArW61, and priors
 try({load(paste(baseDir,"/currentWork/loadfornlm9.RData",sep='')); 
   bestsofar <- importCSV(paste(baseDir,"/currentWork/soc04fit9par01to61_1.csv",sep=''))}) # for kikidi / hal ?
@@ -676,8 +662,8 @@ beliefModelFit <- function(pts,Par0=NULL,nlmprintlev=0) {
   if (is.null(Par0)){ Par0 <- priors; }
   
   ml1fit <- list();
-  ml1res <- matrix(NA,nrow=dim(datArW61)[3],ncol=14);
-  dimnames(ml1res)[[2]] <- c('a0min', 'a0max', 'Tpred', 'Bpred ', 'decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi', 'sesh', 'predSLP', 'SESLD','SEcor','predProb','BIC');
+  ml1res <- matrix(NA,nrow=dim(datArW61)[3],ncol=15);
+  dimnames(ml1res)[[2]] <- c('n0','a0min', 'a0max', 'Tpred', 'Bpred ', 'decayCoeffGroups', 'decayCoeffSelf', 'weightSelf', 'sensi', 'sesh', 'predSLP', 'SESLD','SEcor','predProb','BIC');
   #put back n0 above if 10p, also ncol = 15
   
   for (ptN in pts){ #1:dim(datArW61)[3] ){
@@ -690,19 +676,19 @@ beliefModelFit <- function(pts,Par0=NULL,nlmprintlev=0) {
     ml1fit[[ptN]] <- list();
     mPD <- Inf;
     
-    #tryPmatrixwbest<-matrix(NA,nrow=129,ncol=10)
-    #tryPmatrixwbest[1:128,] <- tryPmatrix
-    #tryPmatrixwbest[129,] <-bestsofar[ptN,]
-    #allsets <- matrix(NA,nrow=129,ncol=12)
+    tryPmatrixwbest<-matrix(NA,nrow=129,ncol=10)
+    tryPmatrixwbest[1:128,] <- tryPmatrix
+    tryPmatrixwbest[129,] <-bestsofar[ptN,]
+    allsets <- matrix(NA,nrow=129,ncol=12)
     
     #from 10p versions, now leave out n0 :
-    tryPmatrix9 <- tryPmatrix[,2:10]
+    #tryPmatrix9 <- tryPmatrix[,2:10]
     #bestsofar9 <-  bestsofar[,2:10]
     
-    tryPmatrixwbest<-matrix(NA,nrow=129,ncol=9)
-    tryPmatrixwbest[1:128,] <- tryPmatrix9
-    tryPmatrixwbest[129,] <-as.numeric(bestsofar9[ptN,])
-    allsets <- matrix(NA,nrow=129,ncol=11)
+    #tryPmatrixwbest<-matrix(NA,nrow=129,ncol=9)
+    #tryPmatrixwbest[1:128,] <- tryPmatrix9
+    #tryPmatrixwbest[129,] <-as.numeric(bestsofar9[ptN,])
+    #allsets <- matrix(NA,nrow=129,ncol=11)
     
     attempts <- c(129,1:128); if (Debug){ attempts <- c(129)} # , 73) } #attempts <- c(1,25,50,75,100,125) for testing
     for (set in attempts) { 
@@ -735,14 +721,14 @@ beliefModelFit <- function(pts,Par0=NULL,nlmprintlev=0) {
         }
         #now to save estp and summed log likelihoods for all trials
         estpOfAttempt <- (tr2natLP4(fitAttempt$estimate)) ;
-        #allsets[set,1:10] <- estpOfAttempt
-        #attemptSLP <- SLPsocio4(estpOfAttempt, D);
-        #allsets[set,11]   <- attemptSLP$SESLnP
-        #allsets[set,12]   <- attemptSLP$predSLnP
+        allsets[set,1:10] <- estpOfAttempt
+        attemptSLP <- SLPsocio4(estpOfAttempt, D);
+        allsets[set,11]   <- attemptSLP$SESLnP
+        allsets[set,12]   <- attemptSLP$predSLnP
         
-        allsets[set,1:9] <- estpOfAttempt
-        allsets[set,10]   <- SLPsocio4(estpOfAttempt, D)$SESLnP
-        allsets[set,11]   <- SLPsocio4(estpOfAttempt, D)$predSLnP
+        #allsets[set,1:9] <- estpOfAttempt
+        #allsets[set,10]   <- SLPsocio4(estpOfAttempt, D)$SESLnP
+        #allsets[set,11]   <- SLPsocio4(estpOfAttempt, D)$predSLnP
         ml1fit[[ptN]][[3]] <- allsets 
       }
       
@@ -750,34 +736,34 @@ beliefModelFit <- function(pts,Par0=NULL,nlmprintlev=0) {
       ## } 
     } # End exploration of initial conditions
     
-    #est10p <- (tr2natLP4(ml1fit[[ptN]][[1]]$estimate)) ;
-    #ml1fit[[ptN]][[2]] <- SLPsocio4(est10p, D);
-    #names(ml1fit[[ptN]]) <- c('NLM','SLP','alltrials')
-    
-    est9p <- (tr2natLP4(ml1fit[[ptN]][[1]]$estimate)) ;
-    ml1fit[[ptN]][[2]] <- SLPsocio4(est9p, D);
+    est10p <- (tr2natLP4(ml1fit[[ptN]][[1]]$estimate)) ;
+    ml1fit[[ptN]][[2]] <- SLPsocio4(est10p, D);
     names(ml1fit[[ptN]]) <- c('NLM','SLP','alltrials')
     
+    #est9p <- (tr2natLP4(ml1fit[[ptN]][[1]]$estimate)) ;
+    #ml1fit[[ptN]][[2]] <- SLPsocio4(est9p, D);
+    #names(ml1fit[[ptN]]) <- c('NLM','SLP','alltrials')
+    
     # output array storage
-    #ml1res[ptN,1:10] <- tr2natLP4(ml1fit[[ptN]][[1]]$estimate);
-    #ml1res[ptN,11]   <- ml1fit[[ptN]][[2]][[1]];
-    #ml1res[ptN,12]   <- ml1fit[[ptN]][[2]][[2]];
+    ml1res[ptN,1:10] <- tr2natLP4(ml1fit[[ptN]][[1]]$estimate);
+    ml1res[ptN,11]   <- ml1fit[[ptN]][[2]][[1]];
+    ml1res[ptN,12]   <- ml1fit[[ptN]][[2]][[2]];
     #co <- cor(na.omit(ml1fit[[ptN]][[2]][[3]][,,1][,c('SE','expSE')])) #SE correlation, 2sf
     #ml1res[ptN,13]   <- round(co[1,2],4);    
     #ml1res[ptN,14]   <- exp(ml1res[ptN,11]/192) #percentage of right predictions
     
-    ml1res[ptN,1:9] <- tr2natLP4(ml1fit[[ptN]][[1]]$estimate);
-    ml1res[ptN,10]   <- ml1fit[[ptN]][[2]][[1]];
-    ml1res[ptN,11]   <- ml1fit[[ptN]][[2]][[2]];
+    #ml1res[ptN,1:9] <- tr2natLP4(ml1fit[[ptN]][[1]]$estimate);
+    #ml1res[ptN,10]   <- ml1fit[[ptN]][[2]][[1]];
+    #ml1res[ptN,11]   <- ml1fit[[ptN]][[2]][[2]];
     v <- D[,'SE',1]; v <- 1+v; v<- v/v;
     expSE <- ml1fit[[ptN]][[2]][[3]][,'expSE',1]*c(NA,v);  expSE <- expSE[-1]; #previously from line 669
-    ml1res[ptN,12]   <- round(cor(na.omit(data.frame(D[,'SE',1], expSE)))[1,2],2) #SE correlation, 2sf
-    ml1res[ptN,13]   <- exp(ml1res[ptN,10]/192) #percentage of right predictions 
+    ml1res[ptN,13]   <- round(cor(na.omit(data.frame(D[,'SE',1], expSE)))[1,2],2) #SE correlation, 2sf
+    ml1res[ptN,14]   <- exp(ml1res[ptN,10]/192) #percentage of right predictions 
     
     #now the individual BIC
     LnforBIC = ml1fit[[ptN]][[2]]$predSLnP + ml1fit[[ptN]][[2]]$SESLnP 
     nforBIC = length(na.omit(D[,'pred',1]))+ length(na.omit(D[,'SE',1])) 
-    kforBIC = 9 #number of params - for 10p, 10
+    kforBIC = 10 #number of params - for 10p, 10
     ml1res[ptN,14]   <- log(nforBIC)*kforBIC - 2*LnforBIC #BIC formula #for 10p, 15 not 14
     
     # filename stem useful for saving stuff:
